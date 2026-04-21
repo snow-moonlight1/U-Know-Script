@@ -64,15 +64,15 @@
 
         styleEl.textContent = `
             :root {
-                --uk-bg: ${isDark ? '#1e293b' : '#ffffff'};
-                --uk-bg-secondary: ${isDark ? '#0f172a' : '#f8fafc'};
-                --uk-border: ${isDark ? '#334155' : '#e2e8f0'};
-                --uk-text: ${isDark ? '#e2e8f0' : '#334155'};
+                --uk-bg: ${isDark ? 'rgba(30, 41, 59, 0.85)' : 'rgba(255, 255, 255, 0.85)'};
+                --uk-bg-secondary: ${isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(241, 245, 249, 0.7)'};
+                --uk-border: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'};
+                --uk-text: ${isDark ? '#f8fafc' : '#0f172a'};
                 --uk-text-secondary: ${isDark ? '#94a3b8' : '#64748b'};
                 --uk-primary: ${isDark ? '#60a5fa' : '#3b82f6'};
-                --uk-shadow: ${isDark ? '0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2)' : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'};
-                --uk-hover: ${isDark ? '#334155' : '#f1f5f9'};
-                --uk-active: ${isDark ? '#475569' : '#cbd5e1'};
+                --uk-shadow: ${isDark ? '0 10px 25px -5px rgba(0,0,0,0.5)' : '0 10px 30px -5px rgba(0,0,0,0.1)'};
+                --uk-hover: ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+                --uk-active: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
                 --uk-progress-bg: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
             }
         `;
@@ -200,7 +200,7 @@
             #kg-toast-wrap {
                 position: fixed; top: 20px; right: 20px; z-index: 2147483647;
                 display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-                font-family: system-ui, -apple-system, sans-serif;
+                font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             }
             .kg-toast {
                 padding: 13px 18px; border-radius: 12px; pointer-events: all;
@@ -208,17 +208,18 @@
                 background: var(--uk-bg); color: var(--uk-text);
                 border: 1px solid var(--uk-border);
                 box-shadow: var(--uk-shadow);
-                border-left: 4px solid var(--toast-color);
+                backdrop-filter: blur(16px) saturate(120%);
+                -webkit-backdrop-filter: blur(16px) saturate(120%);
                 line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;
-                animation: kg-in 0.35s cubic-bezier(.21,1.02,.73,1) forwards;
+                animation: kg-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
             .kg-toast.out { animation: kg-out 0.3s ease forwards; }
             .kg-toast .kg-icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--toast-color); }
             .kg-toast .kg-icon svg { width: 100%; height: 100%; }
-            .kg-toast .kg-body { flex: 1; }
+            .kg-toast .kg-body { flex: 1; text-wrap: pretty; }
             .kg-toast .kg-title { font-weight: 700; margin-bottom: 2px; }
-            .kg-toast .kg-sub   { color: var(--uk-text-secondary); font-size: 12.5px; }
-            .kg-toast.info    { --toast-color: transparent; border-left: none; }
+            .kg-toast .kg-sub   { color: var(--uk-text-secondary); font-size: 12.5px; text-wrap: pretty; }
+            .kg-toast.info    { --toast-color: var(--uk-text-secondary); }
             .kg-toast.info .kg-icon { display: none; }
             .kg-toast.success { --toast-color: #10b981; }
             .kg-toast.error   { --toast-color: #ef4444; }
@@ -227,16 +228,18 @@
             #kg-panel {
                 position: fixed; bottom: 24px; right: 24px; z-index: 2147483647;
                 background: var(--uk-bg); border: 1px solid var(--uk-border);
-                border-radius: 12px; padding: 16px 20px; color: var(--uk-text);
+                border-radius: 16px; padding: 18px 20px; color: var(--uk-text);
                 min-width: 280px; width: 320px; box-sizing: border-box;
-                font-family: system-ui, -apple-system, sans-serif;
+                font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
                 font-size: 13px; box-shadow: var(--uk-shadow);
-                animation: kg-in 0.4s cubic-bezier(.21,1.02,.73,1) forwards;
+                backdrop-filter: blur(16px) saturate(120%);
+                -webkit-backdrop-filter: blur(16px) saturate(120%);
+                animation: kg-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
             #kg-panel * { box-sizing: border-box; }
             .kg-panel-title {
                 font-size: 15px; font-weight: 700; color: var(--uk-text);
-                display: flex; align-items: center;
+                display: flex; align-items: center; text-wrap: balance;
             }
             .kg-settings-btn {
                 cursor: pointer; padding: 4px; border-radius: 6px;
@@ -246,34 +249,34 @@
             .kg-settings-btn:hover { background: var(--uk-hover); color: var(--uk-text); }
             
             #kg-settings-panel {
-                background: var(--uk-bg-secondary); border-radius: 8px;
-                padding: 12px; margin-bottom: 12px;
+                background: var(--uk-bg-secondary); border-radius: 10px;
+                padding: 14px; margin-bottom: 12px;
                 border: 1px solid var(--uk-border);
             }
             .kg-settings-row {
                 display: flex; justify-content: space-between; align-items: center;
-                margin-bottom: 10px; color: var(--uk-text-secondary);
+                margin-bottom: 12px; color: var(--uk-text-secondary);
             }
             .kg-settings-row:last-child { margin-bottom: 0; }
-            .kg-theme-group { display: flex; gap: 4px; background: var(--uk-bg); padding: 2px; border-radius: 8px; border: 1px solid var(--uk-border); }
+            .kg-theme-group { display: flex; gap: 4px; background: var(--uk-bg); padding: 3px; border-radius: 8px; border: 1px solid var(--uk-border); }
             .kg-theme-btn {
                 background: transparent; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer;
                 color: var(--uk-text-secondary); display: flex; align-items: center; transition: all 0.2s;
             }
             .kg-theme-btn:hover { color: var(--uk-text); }
-            .kg-theme-btn.active { background: var(--uk-primary); color: #fff; }
+            .kg-theme-btn.active { background: var(--uk-primary); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             .kg-input {
                 background: var(--uk-bg); border: 1px solid var(--uk-border); border-radius: 6px;
                 color: var(--uk-text); padding: 4px 8px; font-family: inherit; font-size: 12px;
-                text-align: center; outline: none; -moz-appearance: textfield;
+                text-align: center; outline: none; -moz-appearance: textfield; transition: border-color 0.2s;
             }
             .kg-input::-webkit-outer-spin-button, .kg-input::-webkit-inner-spin-button {
                 -webkit-appearance: none; margin: 0;
             }
             .kg-input:focus { border-color: var(--uk-primary); }
 
-            #kg-panel .kg-row { display: flex; justify-content: space-between; margin: 6px 0; color: var(--uk-text-secondary); }
-            #kg-panel .kg-val { font-weight: 600; color: var(--uk-text); }
+            #kg-panel .kg-row { display: flex; justify-content: space-between; margin: 8px 0; color: var(--uk-text-secondary); }
+            #kg-panel .kg-val { font-weight: 600; color: var(--uk-text); text-align: right; text-wrap: balance; }
             
             #kg-progress-bar-wrap {
                 background: var(--uk-progress-bg); border-radius: 99px;
@@ -288,14 +291,14 @@
             .kg-btn-secondary, .kg-btn-danger {
                 display: flex; align-items: center; justify-content: center; gap: 6px;
                 width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer;
-                font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.2s ease;
+                font-size: 13px; font-weight: 500; font-family: inherit; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .kg-btn-secondary {
                 background: var(--uk-bg-secondary); color: var(--uk-text);
                 border: 1px solid var(--uk-border);
             }
-            .kg-btn-secondary:hover { background: var(--uk-hover); }
-            .kg-btn-secondary:active { background: var(--uk-active); }
+            .kg-btn-secondary:hover { background: var(--uk-hover); border-color: var(--uk-text-secondary); }
+            .kg-btn-secondary:active { transform: scale(0.97); }
             .kg-btn-secondary.active {
                 background: var(--uk-primary); color: #fff; border-color: var(--uk-primary);
             }
@@ -304,8 +307,8 @@
                 background: var(--uk-bg-secondary); color: #ef4444; border: 1px solid var(--uk-border);
             }
             .kg-btn-danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
-            .kg-btn-danger:active { background: #dc2626; border-color: #dc2626; color: #fff; }
-            .kg-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+            .kg-btn-danger:active { transform: scale(0.97); border-color: #dc2626; background: #dc2626; color: #fff; }
+            .kg-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; transform: none; }
 
             .kg-skip-val { color: var(--uk-primary) !important; }
 
@@ -408,7 +411,7 @@
             </div>
             <div class="kg-row"><span>已完成知识点</span><span class="kg-val">${count} 个</span></div>
             ${skipRow}
-            ${knowledgeName ? `<div class="kg-row" style="align-items:flex-start;"><span>正在处理</span><span class="kg-val" style="max-width:180px;word-wrap:break-word;text-align:right;font-size:12px;line-height:1.4" title="${knowledgeName}">${knowledgeName}</span></div>` : ''}
+            ${knowledgeName ? `<div class="kg-row" style="align-items:flex-start; min-height: 34px;"><span>正在处理</span><span class="kg-val" style="max-width:170px; word-break:break-all; text-align:right; font-size:12px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" title="${knowledgeName}">${knowledgeName}</span></div>` : ''}
             ${countdownRow}
             ${abortedLabel}
             
