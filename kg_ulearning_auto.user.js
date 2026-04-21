@@ -47,7 +47,9 @@
 
     function getSetting(key, def) {
         const val = localStorage.getItem(key);
-        return val !== null ? parseFloat(val) : def;
+        if (val === null) return def;
+        const parsed = parseFloat(val);
+        return isNaN(parsed) ? def : parsed;
     }
 
     function applyTheme(theme) {
@@ -178,18 +180,25 @@
     }
 
     function calculateAnswerDelay(questionList) {
-        const charCount = extractTotalCharCount(questionList);
-        const baseTime = getSetting('uknow_baseTime', 8);
-        const readingTimeSec = charCount / 5;
-        let thinkingTime = 0;
-        const tMin = getSetting('uknow_thinkMin', 2);
-        const tMax = getSetting('uknow_thinkMax', 5);
-        for (let i = 0; i < questionList.length; i++) {
-            thinkingTime += randomGaussian(tMin, tMax);
+        let baseTime = getSetting('uknow_baseTime', 8);
+        let tMin = getSetting('uknow_thinkMin', 2);
+        let tMax = getSetting('uknow_thinkMax', 5);
+        
+        // 容错处理：如果用户填反了大小值，自动交换
+        if (tMin > tMax) {
+            let temp = tMin;
+            tMin = tMax;
+            tMax = temp;
         }
-        const totalSec = readingTimeSec + thinkingTime;
-        const jitter = totalSec * (Math.random() * 0.2 - 0.1);
-        return Math.max(baseTime, Math.round(totalSec + jitter));
+
+        let totalTime = 0;
+        for (let i = 0; i < questionList.length; i++) {
+            // 单题总耗时 = 基础耗时 + 随机延时波动
+            totalTime += baseTime + randomGaussian(tMin, tMax);
+        }
+
+        // 完全移除所有“模拟阅读时长”，一切以面板数值为准，所见即所得
+        return Math.max(1, Math.round(totalTime));
     }
 
     function injectStyles() {
@@ -394,14 +403,14 @@
                 </div>
                 <div class="kg-settings-row">
                     <span>单题基础耗时 (秒)</span>
-                    <input type="number" id="kg-set-base" class="kg-input" value="${getSetting('uknow_baseTime', 8)}" style="width: 50px;" />
+                    <input type="number" min="0" step="1" id="kg-set-base" class="kg-input" value="${getSetting('uknow_baseTime', 8)}" style="width: 50px;" />
                 </div>
                 <div class="kg-settings-row">
-                    <span>思考耗时随机域 (秒)</span>
+                    <span>单题随机延时 (秒)</span>
                     <div style="display:flex; gap: 6px; align-items:center;">
-                        <input type="number" id="kg-set-t1" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMin', 2)}" />
+                        <input type="number" min="0" step="1" id="kg-set-t1" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMin', 2)}" />
                         <span>-</span>
-                        <input type="number" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
+                        <input type="number" min="0" step="1" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
                     </div>
                 </div>
             </div>
@@ -450,9 +459,22 @@
         });
 
         const syncSettings = () => {
-            localStorage.setItem('uknow_baseTime', document.getElementById('kg-set-base').value);
-            localStorage.setItem('uknow_thinkMin', document.getElementById('kg-set-t1').value);
-            localStorage.setItem('uknow_thinkMax', document.getElementById('kg-set-t2').value);
+            let tMin = parseFloat(document.getElementById('kg-set-t1').value) || 0;
+            let tMax = parseFloat(document.getElementById('kg-set-t2').value) || 0;
+            let base = parseFloat(document.getElementById('kg-set-base').value) || 0;
+
+            // 自动交换反向的值并在 UI 上纠正显示
+            if (tMin > tMax) {
+                const temp = tMin;
+                tMin = tMax;
+                tMax = temp;
+                document.getElementById('kg-set-t1').value = tMin;
+                document.getElementById('kg-set-t2').value = tMax;
+            }
+
+            localStorage.setItem('uknow_baseTime', base);
+            localStorage.setItem('uknow_thinkMin', tMin);
+            localStorage.setItem('uknow_thinkMax', tMax);
             console.log('[U-Know] 设置已更新');
         };
         ['kg-set-base', 'kg-set-t1', 'kg-set-t2'].forEach(id => {
@@ -625,7 +647,7 @@
         if (questionList.length === 0) return;
 
         const totalDelaySec = calculateAnswerDelay(questionList);
-        console.log(`[U-Know] 模拟延时 ${totalDelaySec}s (${questionList.length} 题, ${extractTotalCharCount(questionList)} 字)`);
+        console.log(`[U-Know] 模拟延时 ${totalDelaySec}s (${questionList.length} 题)`);
 
         showPanel('处理中', completedCount, knowledgeName, totalDelaySec, true);
 
