@@ -4,7 +4,7 @@
 // @version      3.2.0
 // @description  自动化知识图谱测验辅助工具
 // @icon         https://www.ulearning.cn/ulearning/favicon.ico
-// @author       Antigravity & User
+// @author       Antigravity & White
 // @match        *://kg.ulearning.cn/*
 // @run-at       document-start
 // @grant        none
@@ -182,7 +182,7 @@
     }
 
     function calculateAnswerDelay(questionList) {
-        let baseTime = getSetting('uknow_baseTime', 8);
+        const isAuto = getSetting('uknow_auto_delay', 1) === 1;
         let tMin = getSetting('uknow_thinkMin', 2);
         let tMax = getSetting('uknow_thinkMax', 5);
 
@@ -194,12 +194,25 @@
         }
 
         let totalTime = 0;
-        for (let i = 0; i < questionList.length; i++) {
-            // 单题总耗时 = 基础耗时 + 随机延时波动
-            totalTime += baseTime + randomGaussian(tMin, tMax);
+
+        if (isAuto) {
+            // 智能防封逻辑：依赖总字数推导阅读速度
+            const totalChars = extractTotalCharCount(questionList);
+            // 假设人类阅读速度为 300字/分钟，也就是 5字/秒
+            const readSecs = totalChars / 5;
+            totalTime += readSecs;
+            // 为每道题增加 2-5秒 的思考/点击波动，这是系统内生的强制安全边际
+            for (let i = 0; i < questionList.length; i++) {
+                totalTime += randomGaussian(2, 5);
+            }
+        } else {
+            // 完全手动控制逻辑
+            let baseTime = getSetting('uknow_baseTime', 8);
+            for (let i = 0; i < questionList.length; i++) {
+                totalTime += baseTime + randomGaussian(tMin, tMax);
+            }
         }
 
-        // 完全移除所有“模拟阅读时长”，一切以面板数值为准，所见即所得
         return Math.max(1, Math.round(totalTime));
     }
 
@@ -259,10 +272,15 @@
             }
             .kg-settings-btn:hover { background: var(--uk-hover); color: var(--uk-text); }
             
+            #kg-settings-panel-wrap {
+                margin-bottom: 0;
+            }
+            #kg-settings-panel-wrap.open {
+                margin-bottom: 12px;
+            }
             #kg-settings-panel {
                 background: var(--uk-bg-secondary); border-radius: 10px;
-                padding: 14px; margin-bottom: 12px;
-                border: 1px solid var(--uk-border);
+                padding: 14px; border: 1px solid var(--uk-border);
             }
             .kg-settings-row {
                 display: flex; justify-content: space-between; align-items: center;
@@ -351,11 +369,89 @@
                 transform: translate3d(20px, 0, 0); background-color: #ffffff;
             }
             
+            .kg-anim-height {
+                display: grid;
+                grid-template-rows: 0fr;
+                transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .kg-anim-height.open {
+                grid-template-rows: 1fr;
+            }
+            .kg-anim-height-inner {
+                overflow: hidden;
+                min-height: 0;
+                opacity: 0;
+                transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .kg-anim-height.open > .kg-anim-height-inner {
+                opacity: 1;
+            }
+
+            #kg-toast-settings {
+                transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
             @keyframes kg-in  { from { transform: translateX(60px) scale(0.92); opacity:0; } to { transform: none; opacity:1; } }
             @keyframes kg-out { from { transform: none; opacity:1; } to { transform: translateX(60px) scale(0.92); opacity:0; } }
             @keyframes kg-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
         `;
         document.head.appendChild(style);
+    }
+
+    function showDangerModal(title, content, confirmText, seconds, onConfirm, onCancel) {
+        injectStyles();
+        const mask = document.createElement('div');
+        mask.style.cssText = `
+            position:fixed; inset:0; z-index:2147483648;
+            background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+            display:flex; align-items:center; justify-content:center;
+            font-family:ui-sans-serif, system-ui, -apple-system, sans-serif;
+            animation: kg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        `;
+        let t = seconds;
+        mask.innerHTML = `
+            <div style="background:var(--uk-bg); border:1px solid rgba(239, 68, 68, 0.3); border-radius:20px; padding:32px 40px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,0.4), 0 0 40px rgba(239,68,68,0.1); color:var(--uk-text); max-width:400px; width: 100%;">
+                <div style="margin-bottom:20px; color:#ef4444; display:flex; justify-content:center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                </div>
+                <div style="font-size:22px; font-weight:700; margin-bottom:12px; color:#ef4444;">${title}</div>
+                <div style="font-size:15px; color:var(--uk-text-secondary); margin-bottom:32px; line-height:1.6; text-wrap:balance;">${content}</div>
+                <div style="display:flex; gap:12px;">
+                    <button id="kg-modal-cancel" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--uk-border); background:var(--uk-bg-secondary); color:var(--uk-text); cursor:pointer; font-weight:600; transition:all 0.2s;">取消操作</button>
+                    <button id="kg-modal-confirm" disabled style="flex:1; padding:12px; border-radius:10px; border:none; background:rgba(239, 68, 68, 0.5); color:#fff; cursor:not-allowed; font-weight:600; transition:all 0.2s; white-space:nowrap;">${confirmText} <span id="kg-modal-time">(${t}s)</span></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(mask);
+
+        const btnCancel = mask.querySelector('#kg-modal-cancel');
+        const btnConfirm = mask.querySelector('#kg-modal-confirm');
+        const timeEl = mask.querySelector('#kg-modal-time');
+
+        btnCancel.addEventListener('click', () => {
+            mask.remove();
+            clearInterval(timer);
+            if (onCancel) onCancel();
+        });
+
+        const timer = setInterval(() => {
+            t--;
+            if (timeEl) timeEl.textContent = `(${t}s)`;
+            if (t <= 0) {
+                clearInterval(timer);
+                if (timeEl) timeEl.remove();
+                btnConfirm.disabled = false;
+                btnConfirm.style.background = '#ef4444';
+                btnConfirm.style.cursor = 'pointer';
+            }
+        }, 1000);
+
+        btnConfirm.addEventListener('click', () => {
+            if (t > 0) return;
+            mask.remove();
+            clearInterval(timer);
+            if (onConfirm) onConfirm();
+        });
     }
 
     function getToastContainer() {
@@ -418,33 +514,51 @@
                 <div class="kg-settings-btn" id="kg-btn-settings" title="设置">${ICONS.settings}</div>
             </div>
 
-            <div id="kg-settings-panel" style="display: ${settingsOpen ? 'block' : 'none'};">
-                <div class="kg-settings-row">
-                    <span>主题模式</span>
-                    <div class="kg-theme-group">
-                        <button class="kg-theme-btn ${currentTheme === 'light' ? 'active' : ''}" data-theme="light" title="浅色">${ICONS.sun}</button>
-                        <button class="kg-theme-btn ${currentTheme === 'auto' ? 'active' : ''}" data-theme="auto" title="跟随系统">${ICONS.monitor}</button>
-                        <button class="kg-theme-btn ${currentTheme === 'dark' ? 'active' : ''}" data-theme="dark" title="深色">${ICONS.moon}</button>
+            <div id="kg-settings-panel-wrap" class="kg-anim-height ${settingsOpen ? 'open' : ''}">
+                <div class="kg-anim-height-inner">
+                    <div id="kg-settings-panel">
+                        <div class="kg-settings-row">
+                            <span>主题模式</span>
+                            <div class="kg-theme-group">
+                                <button class="kg-theme-btn ${currentTheme === 'light' ? 'active' : ''}" data-theme="light" title="浅色">${ICONS.sun}</button>
+                                <button class="kg-theme-btn ${currentTheme === 'auto' ? 'active' : ''}" data-theme="auto" title="跟随系统">${ICONS.monitor}</button>
+                                <button class="kg-theme-btn ${currentTheme === 'dark' ? 'active' : ''}" data-theme="dark" title="深色">${ICONS.moon}</button>
+                            </div>
+                        </div>
+                        <div class="kg-settings-row" style="margin-top: 8px;">
+                            <span title="防风控：根据试题字数智能模拟人类做题速度" style="color:var(--uk-primary); font-weight: 600;">AI智能延时 (推荐)</span>
+                            <label class="kg-switch">
+                                <input type="checkbox" id="kg-set-auto-delay" ${getSetting('uknow_auto_delay', 1) === 1 ? 'checked' : ''}>
+                                <span class="kg-switch-slider"></span>
+                            </label>
+                        </div>
+                        <!-- 手动延时包裹框 (隐藏取决于 auto_delay) -->
+                        <div id="kg-manual-settings-wrap" class="kg-anim-height ${getSetting('uknow_auto_delay', 1) === 1 ? '' : 'open'}">
+                            <div class="kg-anim-height-inner">
+                                <div id="kg-manual-settings" style="margin-top:10px; padding-top:10px; border-top: 1px dashed var(--uk-border);">
+                                    <div class="kg-settings-row" style="margin-bottom: 8px;">
+                                        <span>单题基础耗时 (秒)</span>
+                                        <input type="number" min="0" step="1" id="kg-set-base" class="kg-input" value="${getSetting('uknow_baseTime', 8)}" style="width: 50px;" />
+                                    </div>
+                                    <div class="kg-settings-row" style="margin-bottom: 4px;">
+                                        <span>单题随机延时 (秒)</span>
+                                        <div style="display:flex; gap: 6px; align-items:center;">
+                                            <input type="number" min="0" step="1" id="kg-set-t1" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMin', 2)}" />
+                                            <span>-</span>
+                                            <input type="number" min="0" step="1" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="kg-settings-row" style="margin-top: ${getSetting('uknow_auto_delay', 1) === 1 ? '8px' : '10px'}; border-top: ${getSetting('uknow_auto_delay', 1) === 1 ? 'none' : '1px solid var(--uk-border)'}; padding-top: ${getSetting('uknow_auto_delay', 1) === 1 ? '0' : '10px'};" id="kg-toast-settings">
+                            <span title="刷新页面时是否显示加载成功的全息提示">启动提示</span>
+                            <label class="kg-switch">
+                                <input type="checkbox" id="kg-set-toast" ${getSetting('uknow_toast_startup', 1) === 1 ? 'checked' : ''}>
+                                <span class="kg-switch-slider"></span>
+                            </label>
+                        </div>
                     </div>
-                </div>
-                <div class="kg-settings-row">
-                    <span>单题基础耗时 (秒)</span>
-                    <input type="number" min="0" step="1" id="kg-set-base" class="kg-input" value="${getSetting('uknow_baseTime', 8)}" style="width: 50px;" />
-                </div>
-                <div class="kg-settings-row">
-                    <span>单题随机延时 (秒)</span>
-                    <div style="display:flex; gap: 6px; align-items:center;">
-                        <input type="number" min="0" step="1" id="kg-set-t1" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMin', 2)}" />
-                        <span>-</span>
-                        <input type="number" min="0" step="1" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
-                    </div>
-                </div>
-                <div class="kg-settings-row" style="margin-top: 4px;">
-                    <span title="刷新页面时是否显示加载成功的全息提示">启动提示</span>
-                    <label class="kg-switch">
-                        <input type="checkbox" id="kg-set-toast" ${getSetting('uknow_toast_startup', 1) === 1 ? 'checked' : ''}>
-                        <span class="kg-switch-slider"></span>
-                    </label>
                 </div>
             </div>
 
@@ -479,7 +593,12 @@
         // Event Listeners
         document.getElementById('kg-btn-settings').addEventListener('click', () => {
             settingsOpen = !settingsOpen;
-            document.getElementById('kg-settings-panel').style.display = settingsOpen ? 'block' : 'none';
+            const panelWrapper = document.getElementById('kg-settings-panel-wrap');
+            if (settingsOpen) {
+                panelWrapper.classList.add('open');
+            } else {
+                panelWrapper.classList.remove('open');
+            }
         });
 
         document.querySelectorAll('.kg-theme-btn').forEach(b => {
@@ -496,6 +615,7 @@
             let tMax = parseFloat(document.getElementById('kg-set-t2').value) || 0;
             let base = parseFloat(document.getElementById('kg-set-base').value) || 0;
             let toastOn = document.getElementById('kg-set-toast').checked ? 1 : 0;
+            let autoOn = document.getElementById('kg-set-auto-delay').checked ? 1 : 0;
 
             // 自动交换反向的值并在 UI 上纠正显示
             if (tMin > tMax) {
@@ -510,9 +630,51 @@
             localStorage.setItem('uknow_thinkMin', tMin);
             localStorage.setItem('uknow_thinkMax', tMax);
             localStorage.setItem('uknow_toast_startup', toastOn);
+            localStorage.setItem('uknow_auto_delay', autoOn);
             console.log('[U-Know] 设置已更新');
             showToast('已保存', '最新设置已生效', 'success', 2500);
+
+            // 调整UI可见性
+            const manualWrap = document.getElementById('kg-manual-settings-wrap');
+            if (autoOn === 1) {
+                manualWrap.classList.remove('open');
+            } else {
+                manualWrap.classList.add('open');
+            }
+            const toastSettings = document.getElementById('kg-toast-settings');
+            toastSettings.style.marginTop = autoOn === 1 ? '8px' : '10px';
+            toastSettings.style.borderTop = autoOn === 1 ? 'none' : '1px solid var(--uk-border)';
+            toastSettings.style.paddingTop = autoOn === 1 ? '0' : '10px';
         };
+
+        const autoSwitch = document.getElementById('kg-set-auto-delay');
+        if (autoSwitch) {
+            autoSwitch.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                if (!isChecked) {
+                    // 防止误操作，弹窗提醒
+                    e.target.checked = true; // 视觉上先强制回弹
+                    showDangerModal(
+                        '风险警告',
+                        '关闭「AI智能延时」并随意填写极小的耗时参数，极易产生非人类做题数据并触发优学院系统风控，导致账号成绩作废或封禁。<br><br>作者不对任何因乱设参数引发的处罚负责！强烈不建议普通用户修改！',
+                        '我已知晓风险并接管',
+                        3,
+                        () => {
+                            // 倒计时结束，用户确认接管
+                            autoSwitch.checked = false;
+                            syncSettings();
+                        },
+                        () => {
+                            // 用户取消（取消也是保持开启状态，不作为）
+                            autoSwitch.checked = true;
+                        }
+                    );
+                } else {
+                    syncSettings();
+                }
+            });
+        }
+
         ['kg-set-base', 'kg-set-t1', 'kg-set-t2', 'kg-set-toast'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', syncSettings);
         });
