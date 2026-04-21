@@ -821,7 +821,7 @@
                 console.log(`[U-Know] 引擎启动 -> id=${knowledgeId}, 共${questionList.length}题, 下一关=${nextId}`);
                 showToast(
                     '处理已启动',
-                    `请保持页面驻留以便完成处理`,
+                    `脚本已开始运行，支持后台运行，请保持标签页开启`,
                     'info', 6000
                 );
 
@@ -876,11 +876,29 @@
     const readyFn = () => {
         injectStyles();
         setTimeout(() => {
-            showToast(
-                '页面加载成功',
-                '点击任意知识点的「去测验」开始运行，已满分的测验将自动跳过。',
-                'info', 7000
-            );
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('/coursekg/')) {
+                // 图谱可视化界面
+                showToast(
+                    '图谱界面加载成功',
+                    '请点击任意知识点 → 点击右侧的「学习」',
+                    'info', 8000
+                );
+            } else if (currentUrl.includes('/stuLearn/')) {
+                // 学习界面
+                showToast(
+                    '学习界面加载成功',
+                    '点击左上角三杠唤出菜单 → 找到最上面的知识点并点击 → 点击「去测验」启动脚本',
+                    'info', 7000
+                );
+            } else {
+                // 其他界面
+                showToast(
+                    '页面加载成功',
+                    '请进入知识图谱界面开始使用',
+                    'info', 6000
+                );
+            }
         }, 1000);
     };
     if (document.readyState === 'loading') {
