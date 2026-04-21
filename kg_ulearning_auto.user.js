@@ -42,7 +42,9 @@
         square: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>',
         sun: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
         moon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
-        monitor: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>'
+        monitor: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>',
+        play: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+        pause: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>'
     };
 
     function getSetting(key, def) {
@@ -183,7 +185,7 @@
         let baseTime = getSetting('uknow_baseTime', 8);
         let tMin = getSetting('uknow_thinkMin', 2);
         let tMax = getSetting('uknow_thinkMax', 5);
-        
+
         // 容错处理：如果用户填反了大小值，自动交换
         if (tMin > tMax) {
             let temp = tMin;
@@ -325,6 +327,30 @@
             #kg-countdown-row .kg-val { color: #f59e0b !important; font-variant-numeric: tabular-nums; }
             .kg-pulsing { animation: kg-pulse 1.5s ease-in-out infinite; }
             
+            /* Switch 开关组件 (性能优化版) */
+            .kg-switch { display: inline-block; position: relative; width: 44px; height: 24px; vertical-align: middle; }
+            .kg-switch input { opacity: 0; width: 0; height: 0; }
+            .kg-switch-slider {
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0; cursor: pointer;
+                background-color: var(--uk-bg-secondary); border: 1px solid var(--uk-border);
+                border-radius: 24px; transition: background-color 0.2s ease, border-color 0.2s ease;
+            }
+            .kg-switch-slider:before {
+                position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px;
+                background-color: var(--uk-text-secondary); border-radius: 50%;
+                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                /* 启用 GPU 加速 */
+                transform: translate3d(0, 0, 0);
+                will-change: transform;
+            }
+            .kg-switch input:checked + .kg-switch-slider {
+                background-color: var(--uk-primary); border-color: var(--uk-primary);
+            }
+            .kg-switch input:checked + .kg-switch-slider:before {
+                transform: translate3d(20px, 0, 0); background-color: #ffffff;
+            }
+            
             @keyframes kg-in  { from { transform: translateX(60px) scale(0.92); opacity:0; } to { transform: none; opacity:1; } }
             @keyframes kg-out { from { transform: none; opacity:1; } to { transform: translateX(60px) scale(0.92); opacity:0; } }
             @keyframes kg-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
@@ -413,6 +439,13 @@
                         <input type="number" min="0" step="1" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
                     </div>
                 </div>
+                <div class="kg-settings-row" style="margin-top: 4px;">
+                    <span title="刷新页面时是否显示加载成功的全息提示">启动提示</span>
+                    <label class="kg-switch">
+                        <input type="checkbox" id="kg-set-toast" ${getSetting('uknow_toast_startup', 1) === 1 ? 'checked' : ''}>
+                        <span class="kg-switch-slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="kg-row ${pulsing && countdown <= 0 ? 'kg-pulsing' : ''}">
@@ -434,7 +467,7 @@
                 </button>
                 <div style="display: flex; gap: 8px;">
                     <button id="kg-pause-switch" class="kg-btn-secondary" style="flex: 1; ${isPaused ? 'background: #f59e0b; border-color: #f59e0b; color: white;' : ''}" ${!schedulerRunning || isAborted ? 'disabled' : ''}>
-                        ${isPaused ? '▶ 继续运行' : '⏸ 暂停运行'}
+                        ${isPaused ? ICONS.play + ' 继续运行' : ICONS.pause + ' 暂停运行'}
                     </button>
                     <button id="kg-kill-switch" class="kg-btn-danger" style="flex: 1;" ${isAborted || !schedulerRunning ? 'disabled' : ''}>
                         ${isAborted ? '已中止' : '停止运行'}
@@ -462,6 +495,7 @@
             let tMin = parseFloat(document.getElementById('kg-set-t1').value) || 0;
             let tMax = parseFloat(document.getElementById('kg-set-t2').value) || 0;
             let base = parseFloat(document.getElementById('kg-set-base').value) || 0;
+            let toastOn = document.getElementById('kg-set-toast').checked ? 1 : 0;
 
             // 自动交换反向的值并在 UI 上纠正显示
             if (tMin > tMax) {
@@ -475,9 +509,11 @@
             localStorage.setItem('uknow_baseTime', base);
             localStorage.setItem('uknow_thinkMin', tMin);
             localStorage.setItem('uknow_thinkMax', tMax);
+            localStorage.setItem('uknow_toast_startup', toastOn);
             console.log('[U-Know] 设置已更新');
+            showToast('已保存', '最新设置已生效', 'success', 2500);
         };
-        ['kg-set-base', 'kg-set-t1', 'kg-set-t2'].forEach(id => {
+        ['kg-set-base', 'kg-set-t1', 'kg-set-t2', 'kg-set-toast'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', syncSettings);
         });
 
@@ -507,13 +543,13 @@
                 }
 
                 if (isPaused) {
-                    pBtn.innerHTML = '▶ 继续运行';
+                    pBtn.innerHTML = ICONS.play + ' 继续运行';
                     pBtn.style.background = '#f59e0b';
                     pBtn.style.borderColor = '#f59e0b';
                     pBtn.style.color = 'white';
                     showToast('已暂停', '点击继续运行恢复进度', 'info', 3000);
                 } else {
-                    pBtn.innerHTML = '⏸ 暂停运行';
+                    pBtn.innerHTML = ICONS.pause + ' 暂停运行';
                     pBtn.style.background = '';
                     pBtn.style.borderColor = '';
                     pBtn.style.color = '';
@@ -898,6 +934,8 @@
     const readyFn = () => {
         injectStyles();
         setTimeout(() => {
+            if (getSetting('uknow_toast_startup', 1) !== 1) return; // 用户关闭了初始化提示
+
             const currentUrl = window.location.href;
             if (currentUrl.includes('/coursekg/')) {
                 // 图谱可视化界面
