@@ -1002,6 +1002,7 @@
     async function autoBrush(knowledgeId, prefetchedList = null, prefetchedNextId = null) {
         try {
             checkAbort();
+            await waitIfPaused(); // 在任何请求之前先检查暂停状态
             const { masteryLevel, knowledgeName } = await ghostFetchInfo(knowledgeId);
             const isAlreadyMastered = masteryLevel >= 1.0;
 
