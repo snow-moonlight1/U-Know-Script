@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         U-Know 优学院知识图谱
 // @namespace    kg.ulearning.auto.v3
-// @version      3.2.0
+// @version      3.3.0
 // @description  自动化知识图谱测验辅助工具
 // @icon         https://www.ulearning.cn/ulearning/favicon.ico
 // @author       Antigravity & White
@@ -182,6 +182,7 @@
     }
 
     function calculateAnswerDelay(questionList) {
+        if (getSetting('uknow_no_interval', 0) === 1) return 0;
         const isAuto = getSetting('uknow_auto_delay', 1) === 1;
         let tMin = getSetting('uknow_thinkMin', 2);
         let tMax = getSetting('uknow_thinkMax', 5);
@@ -390,7 +391,23 @@
             #kg-toast-settings {
                 transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
-            
+
+            #kg-global-tooltip {
+                position: fixed; z-index: 2147483648;
+                background: #1e293b; color: #f8fafc;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+                padding: 12px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+                font-weight: 400; width: 240px; pointer-events: none;
+                opacity: 0; visibility: hidden;
+                transition: opacity 0.15s ease, transform 0.15s ease;
+                transform: translateY(0px);
+            }
+            #kg-global-tooltip.show {
+                opacity: 1; visibility: visible;
+                transform: translateY(-2px);
+            }
+
             @keyframes kg-in  { from { transform: translateX(60px) scale(0.92); opacity:0; } to { transform: none; opacity:1; } }
             @keyframes kg-out { from { transform: none; opacity:1; } to { transform: translateX(60px) scale(0.92); opacity:0; } }
             @keyframes kg-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
@@ -398,7 +415,7 @@
         document.head.appendChild(style);
     }
 
-    function showDangerModal(title, content, confirmText, seconds, onConfirm, onCancel) {
+    function showDangerModal(title, content, confirmText, seconds, onConfirm, onCancel, cancelText = '取消操作') {
         injectStyles();
         const mask = document.createElement('div');
         mask.style.cssText = `
@@ -417,7 +434,7 @@
                 <div style="font-size:22px; font-weight:700; margin-bottom:12px; color:#ef4444;">${title}</div>
                 <div style="font-size:15px; color:var(--uk-text-secondary); margin-bottom:32px; line-height:1.6; text-wrap:balance;">${content}</div>
                 <div style="display:flex; gap:12px;">
-                    <button id="kg-modal-cancel" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--uk-border); background:var(--uk-bg-secondary); color:var(--uk-text); cursor:pointer; font-weight:600; transition:all 0.2s;">取消操作</button>
+                    <button id="kg-modal-cancel" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--uk-border); background:var(--uk-bg-secondary); color:var(--uk-text); cursor:pointer; font-weight:600; transition:all 0.2s;">${cancelText}</button>
                     <button id="kg-modal-confirm" disabled style="flex:1; padding:12px; border-radius:10px; border:none; background:rgba(239, 68, 68, 0.5); color:#fff; cursor:not-allowed; font-weight:600; transition:all 0.2s; white-space:nowrap;">${confirmText} <span id="kg-modal-time">(${t}s)</span></button>
                 </div>
             </div>
@@ -548,6 +565,13 @@
                                             <input type="number" min="0" step="1" id="kg-set-t2" class="kg-input" style="width: 44px;" value="${getSetting('uknow_thinkMax', 5)}" />
                                         </div>
                                     </div>
+                                    <div class="kg-settings-row" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--uk-border); margin-bottom: 0;">
+                                        <span id="kg-tooltip-trigger" style="color:#ef4444; font-weight: 600; cursor: help; border-bottom: 1px dashed rgba(239, 68, 68, 0.5);">无间隔模式 (100%封号)</span>
+                                        <label class="kg-switch">
+                                            <input type="checkbox" id="kg-set-no-interval" ${getSetting('uknow_no_interval', 0) === 1 ? 'checked' : ''}>
+                                            <span class="kg-switch-slider"></span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -591,6 +615,49 @@
         `;
 
         // Event Listeners
+        // 确保全局 tooltip DOM 存在（showPanel 每次重渲染都检查）
+        if (!document.getElementById('kg-global-tooltip')) {
+            const t = document.createElement('div');
+            t.id = 'kg-global-tooltip';
+            document.body.appendChild(t);
+        }
+
+        const tooltipTrigger = document.getElementById('kg-tooltip-trigger');
+        if (tooltipTrigger) {
+            tooltipTrigger.addEventListener('mouseenter', (e) => {
+                const rect = e.target.getBoundingClientRect();
+                const tooltip = document.getElementById('kg-global-tooltip');
+                tooltip.innerHTML =
+                    '<div style="color: #f87171; font-weight: 600; margin-bottom: 6px;">' +
+                    '封号风险警示</div>' +
+                    '<div style="color: #cbd5e1; font-size: 12px; line-height: 1.6;">' +
+                    '开启后所有等待时间将被移除，系统会识别并封禁账号。知识点进度保留，但需自行联系老师解封。普通用户请勿开启。</div>';
+                
+                // 先移到屏幕外渲染，测量真实高度
+                tooltip.style.left = '-9999px';
+                tooltip.style.top = '0px';
+                tooltip.style.bottom = '';
+                tooltip.classList.add('show');
+
+                const tooltipW = 240;
+                const actualH = tooltip.offsetHeight; // 获取真实高度
+                const gap = 8;
+                
+                let left = rect.left;
+                if (left + tooltipW > window.innerWidth - 8) left = window.innerWidth - tooltipW - 8;
+                
+                // 根据真实高度定位到正上方
+                let top = rect.top - actualH - gap;
+                if (top < 8) top = rect.bottom + gap;
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            });
+            tooltipTrigger.addEventListener('mouseleave', () => {
+                document.getElementById('kg-global-tooltip').classList.remove('show');
+            });
+        }
+
         document.getElementById('kg-btn-settings').addEventListener('click', () => {
             settingsOpen = !settingsOpen;
             const panelWrapper = document.getElementById('kg-settings-panel-wrap');
@@ -616,6 +683,7 @@
             let base = parseFloat(document.getElementById('kg-set-base').value) || 0;
             let toastOn = document.getElementById('kg-set-toast').checked ? 1 : 0;
             let autoOn = document.getElementById('kg-set-auto-delay').checked ? 1 : 0;
+            let noIntervalOn = document.getElementById('kg-set-no-interval') ? (document.getElementById('kg-set-no-interval').checked ? 1 : 0) : getSetting('uknow_no_interval', 0);
 
             // 自动交换反向的值并在 UI 上纠正显示
             if (tMin > tMax) {
@@ -631,6 +699,7 @@
             localStorage.setItem('uknow_thinkMax', tMax);
             localStorage.setItem('uknow_toast_startup', toastOn);
             localStorage.setItem('uknow_auto_delay', autoOn);
+            localStorage.setItem('uknow_no_interval', noIntervalOn);
             console.log('[U-Know] 设置已更新');
             showToast('已保存', '最新设置已生效', 'success', 2500);
 
@@ -661,12 +730,73 @@
                         3,
                         () => {
                             // 倒计时结束，用户确认接管
-                            autoSwitch.checked = false;
+                            const currentSwitch = document.getElementById('kg-set-auto-delay');
+                            if (currentSwitch) currentSwitch.checked = false;
                             syncSettings();
                         },
                         () => {
                             // 用户取消（取消也是保持开启状态，不作为）
-                            autoSwitch.checked = true;
+                            const currentSwitch = document.getElementById('kg-set-auto-delay');
+                            if (currentSwitch) currentSwitch.checked = true;
+                        }
+                    );
+                } else {
+                    syncSettings();
+                }
+            });
+        }
+
+        const noIntervalSwitch = document.getElementById('kg-set-no-interval');
+        if (noIntervalSwitch) {
+            noIntervalSwitch.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                if (isChecked) {
+                    e.target.checked = false; // 视觉上先强制回弹
+                    showDangerModal(
+                        '风险警告：无间隔模式',
+                        '此模式100%会导致您的账号被封禁！<br><br>开启后将移除所有等待时间，系统会立刻检测到非人类操作。被封后需要自行去找老师沟通解封（进度会保留）。<br>此选项仅限解封极其简单，且完全不想长时间挂在后台的用户使用！<br>普通用户绝不建议开启！',
+                        '我已经完全了解风险',
+                        10,
+                        () => {
+                            showDangerModal(
+                                '这不对吧',
+                                '你确定想清楚了吗？',
+                                '闭嘴',
+                                10,
+                                () => {
+                                    const currentSwitch = document.getElementById('kg-set-no-interval');
+                                    if (currentSwitch) currentSwitch.checked = true;
+                                    syncSettings();
+
+                                    injectStyles();
+                                    const mask = document.createElement('div');
+                                    mask.style.cssText = `
+                                        position:fixed; inset:0; z-index:2147483648;
+                                        background:rgba(0,0,0,0.8); backdrop-filter:blur(8px);
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-family:ui-sans-serif, system-ui, -apple-system, sans-serif;
+                                        animation: kg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                                    `;
+                                    mask.innerHTML = `
+                                        <div style="background:var(--uk-bg); border-radius:20px; padding:40px; text-align:center; color:var(--uk-text); max-width:400px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 24px 60px rgba(0,0,0,0.4);">
+                                            <div style="font-size:36px; margin-bottom:16px;">🙏</div>
+                                            <div style="font-size:22px; font-weight:700; margin-bottom:12px;">佩服</div>
+                                            <div style="color:var(--uk-text-secondary); line-height:1.6; font-size:15px;">
+                                                页面将在几秒后刷新...<br>请重新点击“去测验”触发无间隔极限运行。
+                                            </div>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(mask);
+                                    setTimeout(() => window.location.reload(), 3000);
+                                },
+                                () => {
+                                    showToast('明智的选择', '已取消开启无间隔模式', 'success', 3000);
+                                },
+                                '算了吧'
+                            );
+                        },
+                        () => {
+                            // Cancelled
                         }
                     );
                 } else {
@@ -787,9 +917,12 @@
 
         console.log(`[U-Know] studentKnowledgeInfo → masteryLevel=${masteryLevel} (${knowledgeName})`);
 
-        const delay1 = randomInt(800, 1500);
-        console.log(`[U-Know] 等待 ${delay1}ms`);
-        await sleep(delay1);
+        const isNoInterval = getSetting('uknow_no_interval', 0) === 1;
+        const delay1 = isNoInterval ? 0 : randomInt(800, 1500);
+        if (delay1 > 0) {
+            console.log(`[U-Know] 等待 ${delay1}ms`);
+            await sleep(delay1);
+        }
 
         return { masteryLevel, knowledgeName };
     }
@@ -805,9 +938,12 @@
         const listData = await listRes.json();
         console.log(`[U-Know] listByKnowledgeId → ${listData.list ? listData.list.length : 0} 项资源`);
 
-        const delay2 = randomInt(1500, 3000);
-        console.log(`[U-Know] 等待 ${delay2}ms`);
-        await sleep(delay2);
+        const isNoInterval = getSetting('uknow_no_interval', 0) === 1;
+        const delay2 = isNoInterval ? 0 : randomInt(1500, 3000);
+        if (delay2 > 0) {
+            console.log(`[U-Know] 等待 ${delay2}ms`);
+            await sleep(delay2);
+        }
 
         console.log(`[U-Know] Phase 2 完成`);
     }
