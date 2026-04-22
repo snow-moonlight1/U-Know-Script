@@ -632,7 +632,7 @@
                     '封号风险警示</div>' +
                     '<div style="color: #cbd5e1; font-size: 12px; line-height: 1.6;">' +
                     '开启后所有等待时间将被移除，系统会识别并封禁账号。知识点进度保留，但需自行联系老师解封。普通用户请勿开启。</div>';
-                
+
                 // 先移到屏幕外渲染，测量真实高度
                 tooltip.style.left = '-9999px';
                 tooltip.style.top = '0px';
@@ -642,14 +642,14 @@
                 const tooltipW = 240;
                 const actualH = tooltip.offsetHeight; // 获取真实高度
                 const gap = 8;
-                
+
                 let left = rect.left;
                 if (left + tooltipW > window.innerWidth - 8) left = window.innerWidth - tooltipW - 8;
-                
+
                 // 根据真实高度定位到正上方
                 let top = rect.top - actualH - gap;
                 if (top < 8) top = rect.bottom + gap;
-                
+
                 tooltip.style.left = left + 'px';
                 tooltip.style.top = top + 'px';
             });
@@ -759,7 +759,7 @@
                         10,
                         () => {
                             showDangerModal(
-                                '这不对吧',
+                                '没有后悔药',
                                 '你确定想清楚了吗？',
                                 '闭嘴',
                                 10,
@@ -767,6 +767,7 @@
                                     const currentSwitch = document.getElementById('kg-set-no-interval');
                                     if (currentSwitch) currentSwitch.checked = true;
                                     syncSettings();
+                                    isPaused = true; // 强制暂停后台运行，等待刷新
 
                                     injectStyles();
                                     const mask = document.createElement('div');
@@ -1014,7 +1015,9 @@
                 showPanel('<span style="color:#10b981">跳过（已满分）</span>', completedCount, knowledgeName || `#${knowledgeId}`);
                 showToast(`已跳过当前测验`, `${knowledgeName || `知识点 #${knowledgeId}`} 已满分`, 'info', 2500);
 
-                await sleep(randomInt(500, 1200));
+                if (getSetting('uknow_no_interval', 0) !== 1) {
+                    await sleep(randomInt(500, 1200));
+                }
 
                 if (prefetchedNextId) {
                     afterNextId = prefetchedNextId;
