@@ -1,11 +1,14 @@
 // ==UserScript==
 // @name         U-Know 优学院知识图谱
-// @namespace    kg.ulearning.auto.v3
+// @namespace    https://github.com/snow-moonlight1
 // @version      3.3.0
-// @description  自动化知识图谱测验辅助工具
+// @description  优学院知识图谱自动化测验辅助工具
+// @author       snow-moonlight1
+// @license      MIT
 // @icon         https://www.ulearning.cn/ulearning/favicon.ico
-// @author       Antigravity & White
 // @match        *://kg.ulearning.cn/*
+// @homepage     https://github.com/snow-moonlight1/U-Know-Script
+// @supportURL   https://github.com/snow-moonlight1/U-Know-Script/issues
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==
