@@ -1236,20 +1236,29 @@
     HookedXHR.prototype = OrigXHR.prototype;
     window.XMLHttpRequest = HookedXHR;
 
-    const readyFn = () => {
-        injectStyles();
-        setTimeout(() => {
-            if (getSetting('uknow_toast_startup', 1) !== 1) return; // 用户关闭了初始化提示
+    let lastToastPageType = '';
+    const checkAndShowToast = () => {
+        if (getSetting('uknow_toast_startup', 1) !== 1) return; // 用户关闭了初始化提示
 
-            const currentUrl = window.location.href;
-            if (currentUrl.includes('/coursekg/')) {
+        const currentUrl = window.location.href;
+        let pageType = 'other';
+        if (currentUrl.includes('/coursekg/')) {
+            pageType = 'coursekg';
+        } else if (currentUrl.includes('/stuLearn/')) {
+            pageType = 'stuLearn';
+        }
+
+        // 只有当页面类型发生改变时，才显示对应提示
+        if (lastToastPageType !== pageType) {
+            lastToastPageType = pageType;
+            if (pageType === 'coursekg') {
                 // 图谱可视化界面
                 showToast(
                     '图谱界面加载成功',
                     '请点击任意知识点 → 点击右侧的「学习」',
                     'info', 8000
                 );
-            } else if (currentUrl.includes('/stuLearn/')) {
+            } else if (pageType === 'stuLearn') {
                 // 学习界面
                 showToast(
                     '学习界面加载成功',
@@ -1264,7 +1273,28 @@
                     'info', 6000
                 );
             }
-        }, 1000);
+        }
+    };
+
+    // 监听 SPA 路由变化，适配无刷新跳转
+    const origPushState = history.pushState;
+    history.pushState = function () {
+        const res = origPushState.apply(this, arguments);
+        setTimeout(checkAndShowToast, 500);
+        return res;
+    };
+    const origReplaceState = history.replaceState;
+    history.replaceState = function () {
+        const res = origReplaceState.apply(this, arguments);
+        setTimeout(checkAndShowToast, 500);
+        return res;
+    };
+    window.addEventListener('popstate', () => setTimeout(checkAndShowToast, 500));
+    window.addEventListener('hashchange', () => setTimeout(checkAndShowToast, 500));
+
+    const readyFn = () => {
+        injectStyles();
+        setTimeout(checkAndShowToast, 1000);
     };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', readyFn);
